@@ -1,0 +1,9 @@
+cd server
+source env_server/bin/activate
+pip freeze > requirements.txt
+deactivate
+cd ..
+cd client
+source env_client/bin/activate
+pip freeze > requirements.txt
+deactivate
