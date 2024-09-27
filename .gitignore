@@ -2,5 +2,6 @@
 __pycache__/
 
 # Environments
-env/
+server/env_server/
+client/env_client/
 
