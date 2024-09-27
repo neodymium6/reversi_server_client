@@ -7,7 +7,7 @@ import creversi
 HOST = 'localhost'
 PORT = 12345
 
-connections = []
+connections = [None, None]
 connections_lock = threading.Lock()
 
 def log_setup():
@@ -22,23 +22,45 @@ def log_setup():
     console_handler.setFormatter(logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)s', datefmt='%Y/%m/%d %H:%M:%S'))
     logging.getLogger().addHandler(console_handler)
 
+def handle_command(command, conn):
+    if command.startswith('join '):
+        color = command.split()[1]
+        with connections_lock:
+            if color == 'black' and connections[0] is None:
+                connections[0] = conn
+                conn.send(b'yes')
+                logging.info('connection 0: {}'.format(conn))
+            elif color == 'white' and connections[1] is None:
+                connections[1] = conn
+                conn.send(b'yes')
+                logging.info('connection 1: {}'.format(conn))
+            else:
+                conn.send(b'no')
+                logging.info('connection refused (the color is used): {}'.format(conn))
+    else:
+        conn.send(b'unknown command')
+        logging.info('unknown command: {}'.format(conn))
+
+
 def handle_client(conn, addr):
     logging.info('Connected by {}'.format(addr))
     try:
         while True:
             data = conn.recv(1024)
             if not data:
+                # no data -> connection closed
                 break
             logging.info('Received: {}'.format(data.decode()))
-            conn.send(data)
-            logging.info('Sent: {}'.format(data.decode()))
+            handle_command(data.decode(), conn)
     except Exception as e:
         logging.error(e)
     finally:
         conn.close()
         logging.info('Connection closed by {}'.format(addr))
         with connections_lock:
-            connections.remove(conn)
+            for i in range(len(connections)):
+                if connections[i] == conn:
+                    connections[i] = None
 
 def main():
     log_setup()
@@ -56,13 +78,11 @@ def main():
     while True:
         conn, addr = sock.accept()
         with connections_lock:
-            assert len(connections) <= 2
-            if len(connections) == 2:
+            if connections[0] is not None and connections[1] is not None:
                 conn.send(b'Server is full')
                 conn.close()
                 logging.info('Connection refused: Server is full')
                 continue
-            connections.append(conn)
         threading.Thread(target=handle_client, args=(conn, addr)).start()
 
 if __name__ == '__main__':

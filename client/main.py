@@ -17,18 +17,19 @@ def main():
     logging.getLogger().addHandler(console_handler)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     sock.connect((HOST, PORT))
     logging.info('Connected to {}:{}'.format(HOST, PORT))
 
-    sock.send(b'Hello, world!')
-    logging.info('Sent: Hello, world!')
-
-    data = sock.recv(1024)
-    logging.info('Received: {}'.format(data.decode()))
-    
     while True:
-        pass
+        command = input('Enter command: ')
+        if not command:
+            break
+        sock.send(command.encode())
+        logging.info('Sent: {}'.format(command))
+
+        data = sock.recv(1024)
+        logging.info('Received: {}'.format(data.decode()))
+    
     sock.close()
 
 
