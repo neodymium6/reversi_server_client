@@ -5,3 +5,6 @@ __pycache__/
 server/env_server/
 client/env_client/
 
+# Logs
+server/server.log
+client/client.log
