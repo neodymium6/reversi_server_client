@@ -2,6 +2,9 @@ import socket
 import logging
 import argparse
 
+HOST = 'localhost'
+PORT = 12345
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--log', default='client.log')
@@ -14,11 +17,9 @@ def main():
     logging.getLogger().addHandler(console_handler)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = 'localhost'
-    port = 12345
 
-    sock.connect((host, port))
-    logging.info('Connected to {}:{}'.format(host, port))
+    sock.connect((HOST, PORT))
+    logging.info('Connected to {}:{}'.format(HOST, PORT))
 
     sock.send(b'Hello, world!')
     logging.info('Sent: Hello, world!')
@@ -26,6 +27,8 @@ def main():
     data = sock.recv(1024)
     logging.info('Received: {}'.format(data.decode()))
     
+    while True:
+        pass
     sock.close()
 
 
