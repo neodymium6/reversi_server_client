@@ -4,11 +4,20 @@
 
 ### server -> client
 
+commands do not end with a newline character.
+
 - `game_start`
     - send `game_start` to client to indicate that the game has started.
 
+- `game_end "description"`
+    - send `game_end [description]` to client to indicate that the game has ended.
+    - description can be `black_wins`, `white_wins`, `draw`, `timeout`, or `error`.
+    - example: `game_end black_wins`
+
 
 ### client -> server
+
+commands end with a newline character.
 
 - `join "color"` -> `yes` or `no`
 
