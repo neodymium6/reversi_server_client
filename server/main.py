@@ -13,6 +13,13 @@ connections_lock = threading.Lock()
 game_started = False
 handle_client_threads = []
 
+def conn2idx(conn):
+    with connections_lock:
+        for i in range(len(connections)):
+            if connections[i] == conn:
+                return i
+    return None
+
 def log_setup():
     # logging
     log_format = '%(asctime)s\t[%(filename)s:%(lineno)d %(funcName)s]\t%(levelname)s\t%(message)s'
@@ -47,6 +54,7 @@ def handle_command(command, conn):
 
 
 def handle_client(conn, addr):
+    # return after adding connection to connections
     global game_started
     logging.info('Connected by {}'.format(addr))
     try:
@@ -63,9 +71,8 @@ def handle_client(conn, addr):
                 continue
             logging.info('Received: {}'.format(buffer.decode()[0:-1]))
             handle_command(buffer.decode(), conn)
-            with connections_lock:
-                if connections[0] is not None and connections[1] is not None:
-                    return
+            if conn2idx(conn) is not None:
+                return
     except Exception as e:
         logging.error(e)
         conn.close()
@@ -78,6 +85,7 @@ def handle_client(conn, addr):
 def game_thread(conn_black, conn_white):
     try:
         global game_started
+        logging.info('Game started')
         handle_client_threads[0].join()
         handle_client_threads[1].join()
         handle_client_threads.clear()
