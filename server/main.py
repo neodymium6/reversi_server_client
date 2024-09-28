@@ -39,17 +39,17 @@ def handle_command(command, conn):
         with connections_lock:
             if color == 'black' and connections[0] is None:
                 connections[0] = conn
-                conn.send(b'yes')
+                conn.sendall(b'yes')
                 logging.info('connection 0: {}'.format(conn))
             elif color == 'white' and connections[1] is None:
                 connections[1] = conn
-                conn.send(b'yes')
+                conn.sendall(b'yes')
                 logging.info('connection 1: {}'.format(conn))
             else:
-                conn.send(b'no')
+                conn.sendall(b'no')
                 logging.info('connection refused (the color is used): {}'.format(conn))
     else:
-        conn.send(b'unknown command')
+        conn.sendall(b'unknown command')
         logging.info('unknown command: {}'.format(command[0:-1]))
 
 
@@ -88,9 +88,11 @@ def game_thread(conn_black, conn_white):
         logging.info('Game started')
         handle_client_threads[0].join()
         handle_client_threads[1].join()
+        for thread in handle_client_threads:
+            thread.join()
         handle_client_threads.clear()
-        conn_black.send(b'game_start')
-        conn_white.send(b'game_start')
+        conn_black.sendall(b'game_start')
+        conn_white.sendall(b'game_start')
         logging.info('Check if both clients are ready')
         # check if black is ok
         while True:
@@ -108,8 +110,8 @@ def game_thread(conn_black, conn_white):
             if buffer == b'ok\n':
                 break
             else:
-                conn_black.send(b'game_end error')
-                conn_white.send(b'game_end error')
+                conn_black.sendall(b'game_end error')
+                conn_white.sendall(b'game_end error')
                 return
         # check if white is ok
         while True:
@@ -127,12 +129,68 @@ def game_thread(conn_black, conn_white):
             if buffer == b'ok\n':
                 break
             else:
-                conn_black.send(b'game_end error')
-                conn_white.send(b'game_end error')
+                conn_black.sendall(b'game_end error')
+                conn_white.sendall(b'game_end error')
                 return
         logging.info('Both clients are ready')
+
+        def parse_move(move_command):
+            move_command = move_command.decode().strip()
+            if move_command.split()[0] == 'move':
+                return int(move_command.split()[1])
+            else:
+                raise ValueError('Invalid move command')
         # game start
         board = creversi.Board()
+        while not board.is_game_over():
+            logging.info('Board: {}'.format(board))
+            if board.turn == creversi.BLACK_TURN:
+                conn_black.sendall(b'your_turn')
+                buffer = b''
+                while True:
+                    data = conn_black.recv(1024)
+                    buffer += data
+                    if data.endswith(b'\n'):
+                        break
+                logging.info('Received (black): {}'.format(buffer.decode()[0:-1]))
+                move = parse_move(buffer)
+                if not board.is_legal(move):
+                    raise ValueError('Illegal move')
+                board.move(move)
+                conn_white.sendall('move {}'.format(move).encode())
+                buffer = b''
+                while True:
+                    data = conn_white.recv(1024)
+                    buffer += data
+                    if data.endswith(b'\n'):
+                        break
+                logging.info('Received (white): {}'.format(buffer.decode()[0:-1]))
+                if buffer != b'ok\n':
+                    raise ValueError('Invalid response from white')
+            else:
+                conn_white.sendall(b'your_turn')
+                buffer = b''
+                while True:
+                    data = conn_white.recv(1024)
+                    buffer += data
+                    if data.endswith(b'\n'):
+                        break
+                logging.info('Received (white): {}'.format(buffer.decode()[0:-1]))
+                move = parse_move(buffer)
+                if not board.is_legal(move):
+                    raise ValueError('Illegal move')
+                board.move(move)
+                conn_black.sendall('move {}'.format(move).encode())
+                buffer = b''
+                while True:
+                    data = conn_black.recv(1024)
+                    buffer += data
+                    if data.endswith(b'\n'):
+                        break
+                logging.info('Received (black): {}'.format(buffer.decode()[0:-1]))
+                if buffer != b'ok\n':
+                    raise ValueError('Invalid response from black')
+        logging.info('Game over')
 
     except Exception as e:
         logging.error(e)
@@ -158,14 +216,12 @@ def main():
 
     # accept connection
     while True:
-        addr = None
-        conn = None
         try:
             conn, addr = sock.accept()
             logging.info('Accepted connection from {}'.format(addr))
             with connections_lock:
                 if connections[0] is not None and connections[1] is not None:
-                    conn.send(b'Server is full')
+                    conn.sendall(b'Server is full')
                     conn.close()
                     logging.info('Connection refused: Server is full')
                     continue

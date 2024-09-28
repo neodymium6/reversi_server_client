@@ -1,6 +1,7 @@
 import socket
 import logging
 import argparse
+import creversi
 
 HOST = 'localhost'
 PORT = 12345
@@ -23,7 +24,7 @@ def main():
     logging.info('Connected to {}:{}'.format(HOST, PORT))
 
     # join
-    sock.send('join {}\n'.format(args.color).encode())
+    sock.sendall('join {}\n'.format(args.color).encode())
     data = sock.recv(1024)
     logging.info('Received: {}'.format(data.decode()))
     if data == b'no':
@@ -39,13 +40,31 @@ def main():
         logging.error('Unexpected message')
         sock.close()
         return
-    sock.send(b'ok\n')
+    sock.sendall(b'ok\n')
 
     # game
+    board = creversi.Board()
     while True:
-        sock.recv(1024)
+        data = sock.recv(1024)
         logging.info('Received: {}'.format(data.decode()))
-
+        if data == b'your_turn':
+            # make a move
+            move = int(input('Enter move: '))
+            board.move(move)
+            sock.sendall('move {}\n'.format(move).encode())
+            logging.info('Sent: {}'.format(move))
+        elif data.decode().startswith('move '):
+            # opponent's move
+            move = int(data.decode().split()[1])
+            board.move(move)
+            sock.sendall(b'ok\n')
+            logging.info('Received: {}'.format(data.decode()))
+        elif data.decode().startswith('game_end '):
+            result = data.decode().split()[1]
+            logging.info('Game end: {}'.format(result))
+            break
+        else:
+            logging.error('Unexpected message {}'.format(data.decode()))
 
     sock.close()
 
