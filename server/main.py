@@ -23,9 +23,12 @@ def conn2idx(conn):
 
 
 def log_setup():
+    global HOST, PORT
     # logging
     log_format = "%(asctime)s\t[%(filename)s:%(lineno)d %(funcName)s]\t%(levelname)s\t%(message)s"
     parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default=HOST)
+    parser.add_argument("--port", default=PORT)
     parser.add_argument("--log", default="server.log")
     args = parser.parse_args()
     logging.basicConfig(
@@ -41,6 +44,9 @@ def log_setup():
         logging.Formatter(log_format, datefmt="%Y/%m/%d %H:%M:%S")
     )
     logging.getLogger().addHandler(console_handler)
+    HOST = args.host
+    PORT = int(args.port)
+    logging.info("Host: {}, Port: {}".format(HOST, PORT))
 
 
 def handle_command(command, conn):
