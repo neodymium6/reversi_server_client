@@ -1,5 +1,85 @@
 # reversi_server_client
 
+## server
+
+### usage
+
+```sh
+cd server
+python -m venv server_env
+source server_env/bin/activate
+pip install -r requirements.txt
+python main.py
+```
+
+### command line options
+
+- `--host`
+    - host to bind to
+    - default: `localhost`
+
+- `--port`
+    - port to bind to
+    - default: `12345`
+
+- `--log`
+    - log file to write to
+    - default: `server.log`
+
+
+## client
+
+### usage
+
+```sh
+cd client
+python -m venv client_env
+source client_env/bin/activate
+pip install -r requirements.txt
+python main.py black
+```
+
+### command line options
+
+- `--host`
+    - host to connect to
+    - default: `localhost`
+
+- `--port`
+    - port to connect to
+    - default: `12345`
+
+- `engine`
+    - engine to use
+    - default: `python random_player.py`
+
+- `--log`
+    - log file to write to
+    - default: `client.log`
+
+
+### how to use your own engine
+
+- engine is a command that can be executed in the shell.
+- arg 1 of the command is the color of the client.
+- engine should read board state from stdin and write the move to stdout.
+- engine have to loop until receiving SIGTERM.
+- board state format is as follows:
+    - 1 lines of 64 characters.
+    - each character is either `O`, `X`, or `-`.
+    - `X` is a black piece.
+    - `O` is a white piece.
+    - `-` is an empty space.
+    - the board is read from the top left to the bottom right.
+    - ex: `------------------OOO------OXX----OOXX----OX--------------------`
+- move format is as follows:
+    - 1 line of a number.
+    - the number is the position to place a piece.
+    - the position is from 0 to 64.
+    - the position is read from the top left to the bottom right.
+    - 64 means pass.
+    - ex: `34`
+
 ## internal command
 
 ### server -> client
@@ -48,3 +128,9 @@ commands end with a newline character.
 1. if `yes`, client waits for the game to start
 1. when the game starts, server sends `game_start` to client
 1. client receives `game_start` and starts the game. black goes first.
+    1. if the client receives `your_turn`, the client should respond with `move [number]`
+    1. if the client receives `move [number]`, the client should respond with `ok`
+    1. repeat until the game ends
+1. when the game ends, server sends `game_end [description] [my_pieces] [opponent_pieces]` to client
+1. client receives `game_end` and ends the game
+1. client disconnects from the server
