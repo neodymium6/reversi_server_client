@@ -9,8 +9,11 @@ PORT = 12345
 
 
 def main():
+    global HOST, PORT
     parser = argparse.ArgumentParser()
     parser.add_argument("color", choices=["black", "white"])
+    parser.add_argument("--host", default=HOST)
+    parser.add_argument("--port", type=int, default=PORT)
     parser.add_argument("--engine", default="python random_player.py")
     parser.add_argument("--log", default="client.log")
     args = parser.parse_args()
@@ -21,6 +24,9 @@ def main():
         filename=args.log,
         level=logging.DEBUG,
     )
+    HOST = args.host
+    PORT = args.port
+    logging.info("Host: {}, Port: {}".format(HOST, PORT))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((HOST, PORT))
