@@ -106,6 +106,10 @@ def main():
     print("My pieces: {}".format(my_pieces))
     print("Opponent pieces: {}".format(opponent_pieces))
     sock.close()
+    engine.stdin.close()
+    engine.stdout.close()
+    engine.stderr.close()
+    engine.terminate()
 
 
 if __name__ == "__main__":
