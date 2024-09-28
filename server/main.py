@@ -155,7 +155,7 @@ def game_thread(conn_black, conn_white):
         # game start
         board = creversi.Board()
         while not board.is_game_over():
-            logging.info("Board: {}".format(board))
+            logging.info("\nBoard: {}".format(board))
             if board.turn == creversi.BLACK_TURN:
                 conn_black.sendall(b"your_turn")
                 buffer = b""
