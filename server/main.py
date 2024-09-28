@@ -203,6 +203,41 @@ def game_thread(conn_black, conn_white):
                 if buffer != b"ok\n":
                     raise ValueError("Invalid response from black")
         logging.info("Game over")
+        if board.turn == creversi.BLACK_TURN:
+            black_pieces = board.piece_num()
+            white_pieces = board.opponent_piece_num()
+        else:
+            black_pieces = board.opponent_piece_num()
+            white_pieces = board.piece_num()
+        if black_pieces > white_pieces:
+            conn_black.sendall(
+                "game_end win {} {}".format(black_pieces, white_pieces).encode()
+            )
+            conn_white.sendall(
+                "game_end lose {} {}".format(white_pieces, black_pieces).encode()
+            )
+        elif black_pieces < white_pieces:
+            conn_black.sendall(
+                "game_end lose {} {}".format(black_pieces, white_pieces).encode()
+            )
+            conn_white.sendall(
+                "game_end win {} {}".format(white_pieces, black_pieces).encode()
+            )
+        else:
+            conn_black.sendall(
+                "game_end draw {} {}".format(black_pieces, white_pieces).encode()
+            )
+            conn_white.sendall(
+                "game_end draw {} {}".format(black_pieces, white_pieces).encode()
+            )
+        logging.info("Sent game result")
+        logging.info("Connection closed by game")
+        conn_black.close()
+        conn_white.close()
+        with connections_lock:
+            connections[0] = None
+            connections[1] = None
+        game_started = False
 
     except Exception as e:
         logging.error(e)

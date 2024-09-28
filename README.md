@@ -9,17 +9,31 @@ commands do not end with a newline character.
 - `game_start`
     - send `game_start` to client to indicate that the game has started.
 
-- `game_end "description"`
+- `your_turn`
+    - send `your_turn` to client to indicate that it is the client's turn.
+    - client should respond with `move [number]` where number is the position to place a piece.
+    - example: `move 34`
+
+- `move [number]`
+    - send `move [number]` to client to indicate the opponent's move.
+    - client should respond with `ok` to acknowledge the move.
+    - number is the position where the opponent placed a piece.
+    - example: `move 34`
+
+- `game_end [description] [my_pieces] [opponent_pieces]`
     - send `game_end [description]` to client to indicate that the game has ended.
-    - description can be `black_wins`, `white_wins`, `draw`, `timeout`, or `error`.
-    - example: `game_end black_wins`
+    - description can be `win`, `draw`, `lose`, or `error`.
+    - except for `error`, the description is followed by pieces.
+    - pieces are separated by a space.
+    - pieces are the number of my pieces and the number of opponent pieces.
+    - example: `game_end win 34 30`
 
 
 ### client -> server
 
 commands end with a newline character.
 
-- `join "color"` -> `yes` or `no`
+- `join [color]`
 
     - send `join [color]` to server to join a game.
     - The server will respond with `yes` or `no` to indicate whether the request is accepted.

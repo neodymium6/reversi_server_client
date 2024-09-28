@@ -2,6 +2,7 @@ import socket
 import logging
 import argparse
 import creversi
+import subprocess
 
 HOST = "localhost"
 PORT = 12345
@@ -10,6 +11,7 @@ PORT = 12345
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("color", choices=["black", "white"])
+    parser.add_argument("--engine", default="python random_player.py")
     parser.add_argument("--log", default="client.log")
     args = parser.parse_args()
     log_format = "%(asctime)s\t[%(filename)s:%(lineno)d %(funcName)s]\t%(levelname)s\t%(message)s"
@@ -19,13 +21,6 @@ def main():
         filename=args.log,
         level=logging.DEBUG,
     )
-    # stdout
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-    console_handler.setFormatter(
-        logging.Formatter(log_format, datefmt="%Y/%m/%d %H:%M:%S")
-    )
-    logging.getLogger().addHandler(console_handler)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((HOST, PORT))
@@ -42,6 +37,20 @@ def main():
 
     # wait for game start
     logging.info("Waiting for game start")
+
+    engine_args = []
+    for arg in args.engine.split():
+        engine_args.append(arg)
+    engine_args.append(args.color)
+    # prepare game engine
+    engine = subprocess.Popen(
+        engine_args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
     data = sock.recv(1024)
     logging.info("Received: {}".format(data.decode()))
     if data != b"game_start":
@@ -56,8 +65,17 @@ def main():
         data = sock.recv(1024)
         logging.info("Received: {}".format(data.decode()))
         if data == b"your_turn":
+            if len([move for move in range(64) if board.is_legal(move)]) == 0:
+                board.move(64)
+                sock.sendall(b"move 64\n")
+                logging.info("Sent: pass")
+                continue
             # make a move
-            move = int(input("Enter move: "))
+            board_str = board.to_line()
+            logging.info("Board: {}".format(board_str))
+            engine.stdin.write(board_str + "\n")
+            engine.stdin.flush()
+            move = int(engine.stdout.readline())
             board.move(move)
             sock.sendall("move {}\n".format(move).encode())
             logging.info("Sent: {}".format(move))
@@ -66,14 +84,21 @@ def main():
             move = int(data.decode().split()[1])
             board.move(move)
             sock.sendall(b"ok\n")
-            logging.info("Received: {}".format(data.decode()))
+            logging.info("Sent: ok")
         elif data.decode().startswith("game_end "):
+            if data.decode().split()[1] == "error":
+                raise ValueError("Game end with error")
             result = data.decode().split()[1]
-            logging.info("Game end: {}".format(result))
+            my_pieces = int(data.decode().split()[2])
+            opponent_pieces = int(data.decode().split()[3])
             break
         else:
             logging.error("Unexpected message {}".format(data.decode()))
+            raise Exception("Unexpected message")
 
+    print(result)
+    print("My pieces: {}".format(my_pieces))
+    print("Opponent pieces: {}".format(opponent_pieces))
     sock.close()
 
 
